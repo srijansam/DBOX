@@ -6,15 +6,18 @@ const cors = require("cors");
 const Query = require("./models/Query");
 const fs = require("fs"); // Node.js file system module
 const path = require("path");
-//const router = express.Router(); ///for retreival oof data
+const bcrypt = require("bcrypt"); // Import bcrypt
 const app = express();
 const PORT = process.env.PORT || 5000;
-
-////////////////////////////////////////// Connect to MongoDB/////////////////////////////////
-mongoose.connect("mongodb+srv://test:test@cluster0.8vvlrlk.mongodb.net/", {
-  useNewUrlParser: true,
-  useUnifiedTopology: true
+// Start the server
+app.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
 });
+////////////////////////////////////////// Connect to MongoDB/////////////////////////////////
+mongoose.connect("mongodb+srv://test:test@cluster0.3ctf4.mongodb.net/myDatabase", {
+
+});
+
 const db = mongoose.connection;
 
 db.on("error", console.error.bind(console, "MongoDB connection error:"));
@@ -24,23 +27,8 @@ db.once("open", () => console.log("Connected to MongoDB"));
 app.use(cors());
 app.use(bodyParser.json());
 
-/////////////////////////////////////////Ngo-Schema////////////////////
-// const data = [
-//   { id: 1, name: "Item 1", category: "Clothes" },
-//   { id: 2, name: "Item 2", category: "Bags" },
-//   { id: 3, name: "Item 3", category: "Books" },
-//   { id: 4, name: "Item 4", category: "Grains" },
-//   { id: 5, name: "Item 5", category: "Footwear" },
-//   { id: 6, name: "Item 6", category: "Blankets" },
-//   { id: 7, name: "Item 7", category: "Statonery" }
-//   // Add more sample data
-// ];
-// // Route to get items by category
-// app.get("/items/:category", (req, res) => {
-//   const category = req.params.category;
-//   const itemsInCategory = data.filter((item) => item.category === category);
-//   res.json(itemsInCategory);
-// });
+
+
 //////////////////////////////////////Ngo-Schema////////////////////////////////////////
 const ngoSchema = new mongoose.Schema({
   ngoName: String,
@@ -73,17 +61,8 @@ const userSchema = new mongoose.Schema({
 
 const User = mongoose.model("User", userSchema);
 
-/////////////////////////////////////////// Ticket Schema/////////////////////
-// const ticketSchema = new mongoose.Schema({
-//   description: String,
-//   status: {
-//     type: String,
-//     enum: ["Open", "Closed"],
-//     default: "Open"
-//   }
-// });
 
-// const Ticket = mongoose.model("Ticket", ticketSchema);
+
 
 ///////////////////////////////////////donate-schema////////////////////////////////////
 const donateSchema = new mongoose.Schema({
@@ -105,30 +84,7 @@ const Donation = mongoose.model("Donation", donateSchema);
 const upload = multer({ dest: "uploads/" });
 
 ////////////////////////////route for donation//////////////////
-// app.post("/upload", upload.single("picture"), async (req, res) => {
-//   try {
-//     // Create a new donation object
-//     const newDonation = new Donation({
-//       email: req.body.email,
-//       address: req.body.address,
-//       contact: req.body.contact,
-//       donation: req.body.donation,
-//       picture: {
-//         data: req.file.buffer,
-//         contentType: req.file.mimetype
-//       },
-//       description: req.body.description
-//     });
 
-//     // Save the donation object to MongoDB
-//     await newDonation.save();
-
-//     res.status(201).send("Donation saved successfully");
-//   } catch (error) {
-//     console.error("Error saving donation:", error);
-//     res.status(500).send("Error saving donation");
-//   }
-// });
 
 app.post("/upload", upload.single("picture"), async (req, res) => {
   try {
@@ -170,7 +126,7 @@ app.post("/upload", upload.single("picture"), async (req, res) => {
 });
 
 ////////////////////////////////////////////////////////////////////////////retrive the above  info////////////////
-////////////////////////////////////Trial//////////////////////////
+
 // Define a schema for your item collection
 const itemSchema = new mongoose.Schema({
   name: String,
@@ -197,33 +153,7 @@ app.get("/items/:category", async (req, res) => {
 
 ////////////////////////////////////Trial Ends////////////////////////////
 
-// Backend: Retrieve donations with base64 encoded images
-// app.get("/donations", async (req, res) => {
-//   try {
-//     const donations = await Donation.find();
 
-//     // Convert image data to base64 before sending
-//     const donationsWithBase64Image = donations.map((donation) => {
-//       if (donation.picture && donation.picture.data) {
-//         const base64Image = donation.picture.data.toString("base64");
-//         return {
-//           ...donation.toObject(),
-//           picture: {
-//             data: base64Image,
-//             contentType: donation.picture.contentType
-//           }
-//         };
-//       } else {
-//         return donation.toObject();
-//       }
-//     });
-
-//     res.status(200).json(donationsWithBase64Image);
-//   } catch (error) {
-//     console.error("Error retrieving donations:", error);
-//     res.status(500).send("Error retrieving donations");
-//   }
-// });
 app.get("/donations", async (req, res) => {
   try {
     const donations = await Donation.find();
@@ -271,8 +201,8 @@ app.post("/send-request", async (req, res) => {
     res.status(500).send("Error sending request message");
   }
 });
-///////////////////////////////////////////////////////////////
-// Node.js/Express example
+///////////////////////////////////////////////////////////////////////////
+
 app.get("/requests", async (req, res) => {
   try {
     const { recipientEmail } = req.query;
@@ -336,20 +266,25 @@ app.post("/login", async (req, res) => {
 
     // Check if the user is the admin
     if (email === adminUser.email && password === adminUser.password) {
-      return res.status(200).send("Login successful");
+      return res.status(200).send("Login successful as admin");
     }
 
     // If not the admin, proceed with regular user login logic
-    const user = await User.findOne({ email, password });
-    if (user) {
+    const user = await User.findOne({ email });
+    if (user && user.password === password) {
       res.status(200).send("Login successful");
     } else {
       res.status(401).send("Incorrect email or password");
     }
   } catch (error) {
-    res.status(500).send(error.message);
+    console.error("Error during user login:", error);
+    res.status(500).send("Error logging in");
   }
+  
+
 });
+
+
 ////////////////////////////////////////////////NGO- Login ROute/////////////////
 app.post("/ngologin", async (req, res) => {
   try {
@@ -365,9 +300,10 @@ app.post("/ngologin", async (req, res) => {
     res.status(500).send(error.message);
   }
 });
+
 //////////////////////////////////////////////////////////////////////////////////////
 
-/////////////////////////////////////////////////////// Route to update a query
+
 
 //////////////////////////////route sign up user///////////////////////////
 app.post("/signup", async (req, res) => {
@@ -379,6 +315,8 @@ app.post("/signup", async (req, res) => {
     res.status(500).send(error.message);
   }
 });
+
+
 ////////////////////////////////////////////////////////////////////////////
 
 /////////////////////////////////////////////////NGO Signup route/////////////////////////
@@ -392,7 +330,5 @@ app.post("/ngosignup", async (req, res) => {
   }
 });
 
-// Start the server
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
-});
+
+
